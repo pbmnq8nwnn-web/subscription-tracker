@@ -1,5 +1,6 @@
-# 敏感資訊
+# 敏感資訊與個人資料
 .env
+subscriptions.json
 
 # 自動產生的快取與備份
 rates.cache.json
