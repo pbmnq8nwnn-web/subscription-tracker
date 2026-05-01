@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>訂閱管理</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+<header>
+  <h1>📋 訂閱管理</h1>
+  <button onclick="openModal()">＋ 新增訂閱</button>
+</header>
+
+<div class="stats">
+  <div class="stat-card">
+    <div class="label">每月實際花費（TWD）</div>
+    <div class="value" id="stat-monthly">—</div>
+    <div class="sub">我實際負擔的金額</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">每年實際花費（TWD）</div>
+    <div class="value" id="stat-yearly">—</div>
+    <div class="sub">換算年費</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">即將到期</div>
+    <div class="value" id="stat-upcoming">—</div>
+    <div class="sub">7 天內需續約</div>
+  </div>
+</div>
+
+<div class="section-title">費用分析</div>
+<div class="charts">
+  <div class="chart-card">
+    <h3>分類費用佔比</h3>
+    <div class="chart-wrap-donut">
+      <canvas id="chart-donut"></canvas>
+    </div>
+  </div>
+  <div class="chart-card">
+    <h3>未來 12 個月扣款預測（TWD）</h3>
+    <div class="chart-wrap-bar">
+      <canvas id="chart-bar"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="section-title">所有訂閱</div>
+<div class="toolbar">
+  <div class="toolbar-row">
+    <span class="toolbar-label">排序</span>
+    <select id="sort-select" onchange="applyFilters()">
+      <option value="date-asc">到期日（最近優先）</option>
+      <option value="date-desc">到期日（最遠優先）</option>
+      <option value="cost-desc">月費換算（高到低）</option>
+      <option value="cost-asc">月費換算（低到高）</option>
+    </select>
+    <span class="toolbar-label" style="margin-left:8px">狀態</span>
+    <div class="chip-group">
+      <button class="chip active" onclick="setChip('status','',this)">全部</button>
+      <button class="chip" onclick="setChip('status','active',this)">使用中</button>
+      <button class="chip" onclick="setChip('status','paused',this)">暫停</button>
+      <button class="chip" onclick="setChip('status','cancelled',this)">已取消</button>
+    </div>
+  </div>
+  <div class="toolbar-row">
+    <span class="toolbar-label">分類</span>
+    <div class="chip-group">
+      <button class="chip active" onclick="setChip('category','',this)">全部</button>
+      <button class="chip" onclick="setChip('category','娛樂',this)">娛樂</button>
+      <button class="chip" onclick="setChip('category','工具',this)">工具</button>
+      <button class="chip" onclick="setChip('category','雲端',this)">雲端</button>
+      <button class="chip" onclick="setChip('category','健康',this)">健康</button>
+      <button class="chip" onclick="setChip('category','新聞',this)">新聞</button>
+      <button class="chip" onclick="setChip('category','教育',this)">教育</button>
+      <button class="chip" onclick="setChip('category','其他',this)">其他</button>
+    </div>
+  </div>
+</div>
+<div class="list" id="list"></div>
+
+<!-- Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modal-title">新增訂閱</h2>
+    <div class="form-grid">
+
+      <div class="form-full">
+        <label>服務名稱 *</label>
+        <input id="f-name" placeholder="例：Netflix、Spotify" />
+      </div>
+
+      <div>
+        <label>分類</label>
+        <select id="f-category">
+          <option value="娛樂">娛樂</option>
+          <option value="工具">工具</option>
+          <option value="雲端">雲端</option>
+          <option value="健康">健康</option>
+          <option value="新聞">新聞</option>
+          <option value="教育">教育</option>
+          <option value="其他">其他</option>
+        </select>
+      </div>
+      <div>
+        <label>狀態</label>
+        <select id="f-status">
+          <option value="active">使用中</option>
+          <option value="paused">暫停</option>
+          <option value="cancelled">已取消</option>
+        </select>
+      </div>
+
+      <div>
+        <label>訂閱原價 *</label>
+        <input id="f-amount" type="number" min="0" step="0.01" placeholder="0" />
+      </div>
+      <div>
+        <label>幣別</label>
+        <select id="f-currency">
+          <option value="TWD">TWD 台幣</option>
+          <option value="USD">USD 美金</option>
+          <option value="JPY">JPY 日圓</option>
+          <option value="EUR">EUR 歐元</option>
+        </select>
+      </div>
+
+      <div>
+        <label>扣款週期</label>
+        <select id="f-cycle">
+          <option value="monthly">每月</option>
+          <option value="yearly">每年</option>
+          <option value="quarterly">每季</option>
+          <option value="weekly">每週</option>
+        </select>
+      </div>
+      <div>
+        <label>下次扣款日 *</label>
+        <input id="f-next-date" type="date" />
+      </div>
+
+      <div>
+        <label>付款方式</label>
+        <input id="f-payment" placeholder="例：永豐卡末四碼 1234" />
+      </div>
+      <div>
+        <label>提前幾天提醒</label>
+        <input id="f-remind" type="number" min="1" max="30" value="7" />
+      </div>
+
+      <hr class="divider" />
+
+      <div class="form-full">
+        <label>付款角色</label>
+        <select id="f-plan-type" onchange="onPlanTypeChange()">
+          <option value="solo">我付全額（個人方案）</option>
+          <option value="member">我是成員（別人付，我分攤）</option>
+          <option value="organizer">我是團主（我付，成員回補我）</option>
+        </select>
+      </div>
+
+      <div class="plan-section" id="section-member">
+        <div class="plan-section-title">成員設定</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label>我的分攤金額 *</label>
+            <input id="f-my-share" type="number" min="0" step="0.01" placeholder="0" />
+          </div>
+          <div>
+            <label>付給誰</label>
+            <input id="f-pay-to" placeholder="例：小明" />
+          </div>
+        </div>
+      </div>
+
+      <div class="plan-section" id="section-organizer">
+        <div class="plan-section-title">成員名單（填寫他們應付你的金額）</div>
+        <div class="members-list" id="members-list"></div>
+        <div class="organizer-actions">
+          <button class="btn-add-member" onclick="addMemberRow()">＋ 新增成員</button>
+          <button class="btn-split-equal" onclick="splitEqually()" title="依人數（含你自己）平均分配">⚖️ 平均分配</button>
+        </div>
+      </div>
+
+      <div class="form-full">
+        <label>備註</label>
+        <textarea id="f-notes" placeholder="選填..."></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">取消</button>
+      <button class="btn-save" onclick="save()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+# 敏感資訊
+.env
+
+# 自動產生的快取與備份
+rates.cache.json
+backups/
+check.log
+
+# macOS 系統檔
+.DS_Store
+
+# Node.js
+node_modules/
