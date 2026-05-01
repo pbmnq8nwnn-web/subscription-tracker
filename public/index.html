@@ -87,11 +87,47 @@
 <div class="overlay" id="overlay">
   <div class="modal">
     <h2 id="modal-title">新增訂閱</h2>
+
+    <!-- 快速新增區（新增時顯示，編輯時隱藏） -->
+    <div id="quick-section">
+      <div class="quick-label">熱門服務快選</div>
+      <div class="quick-grid" id="service-grid"></div>
+      <div class="plan-row" id="plan-row">
+        <div class="plan-inner">
+          <div class="quick-label" id="plan-label">選擇方案</div>
+          <div class="plan-chips" id="plan-chips"></div>
+        </div>
+      </div>
+      <hr class="modal-divider" />
+    </div>
+
     <div class="form-grid">
 
       <div class="form-full">
         <label>服務名稱 *</label>
-        <input id="f-name" placeholder="例：Netflix、Spotify" />
+        <input id="f-name" list="service-list" placeholder="例：Netflix、Spotify" oninput="onNameInput(this)" />
+        <datalist id="service-list">
+          <option value="Netflix">
+          <option value="Spotify">
+          <option value="YouTube Premium">
+          <option value="iCloud+">
+          <option value="Adobe Creative Cloud">
+          <option value="Microsoft 365">
+          <option value="Claude Pro">
+          <option value="Disney+">
+          <option value="Apple One">
+          <option value="Figma">
+          <option value="Notion">
+          <option value="Canva Pro">
+          <option value="ChatGPT Plus">
+          <option value="Google One">
+          <option value="Nintendo Switch Online">
+          <option value="Amazon Prime">
+          <option value="LINE MUSIC">
+          <option value="KKBOX">
+          <option value="Coursera">
+        </datalist>
+        <div class="hint" id="name-hint"></div>
       </div>
 
       <div>

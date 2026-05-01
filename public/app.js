@@ -5,6 +5,126 @@ const CAT_COLORS = {
   '健康': '#10b981', '新聞': '#ef4444', '教育': '#06b6d4', '其他': '#94a3b8'
 };
 
+const SERVICE_MAP = {
+  'Netflix':         { icon: '🎬', category: '娛樂', currency: 'TWD', cycle: 'monthly', plans: [{ name: '基本', amount: 299 }, { name: '標準', amount: 399 }, { name: '高級', amount: 539 }] },
+  'Spotify':         { icon: '🎵', category: '娛樂', currency: 'TWD', cycle: 'monthly', plans: [{ name: '個人', amount: 168 }, { name: '學生', amount: 88 }, { name: 'Duo', amount: 228 }, { name: '家庭', amount: 298 }] },
+  'YouTube Premium': { icon: '▶️', category: '娛樂', currency: 'TWD', cycle: 'monthly', plans: [{ name: 'Lite', amount: 280 }, { name: '個人', amount: 480 }, { name: '家庭', amount: 840 }, { name: '學生', amount: 280 }] },
+  'iCloud+':         { icon: '☁️', category: '雲端', currency: 'TWD', cycle: 'monthly', plans: [{ name: '50GB', amount: 30 }, { name: '200GB', amount: 90 }, { name: '2TB', amount: 300 }, { name: '6TB', amount: 900 }, { name: '12TB', amount: 1790 }] },
+  'Microsoft 365':   { icon: '📄', category: '工具', currency: 'TWD', cycle: 'yearly',  plans: [{ name: '基本版', amount: 720 }, { name: '個人版', amount: 3690 }, { name: '家用版', amount: 4190 }, { name: '進階版', amount: 8028 }] },
+  'Apple One':       { icon: '🍎', category: '雲端', currency: 'TWD', cycle: 'monthly', plans: [{ name: '個人', amount: 390 }, { name: '家庭', amount: 490 }] },
+  'Adobe CC':        { icon: '🎨', category: '工具', currency: 'USD', cycle: 'monthly', plans: [{ name: '全方位創意應用', amount: 54.99 }] },
+  'Claude Pro':      { icon: '🤖', category: '工具', currency: 'USD', cycle: 'monthly', plans: [{ name: 'Pro（月付）', amount: 20 }, { name: 'Pro（年付）', amount: 17, cycle: 'yearly' }, { name: 'Max', amount: 100 }] },
+  'Disney+':         { icon: '✨', category: '娛樂', currency: 'TWD', cycle: 'monthly', plans: [{ name: '標準', amount: 390 }] },
+};
+
+const SIMPLE_SERVICES = {
+  'Adobe Creative Cloud': { category: '工具', currency: 'USD', cycle: 'monthly' },
+  'Figma':         { category: '工具', currency: 'USD', cycle: 'monthly' },
+  'Notion':        { category: '工具', currency: 'USD', cycle: 'monthly' },
+  'Canva Pro':     { category: '工具', currency: 'USD', cycle: 'yearly'  },
+  'ChatGPT Plus':  { category: '工具', currency: 'USD', cycle: 'monthly' },
+  'Google One':    { category: '雲端', currency: 'TWD', cycle: 'monthly' },
+  'Nintendo Switch Online': { category: '娛樂', currency: 'JPY', cycle: 'yearly' },
+  'Amazon Prime':  { category: '其他', currency: 'USD', cycle: 'monthly' },
+  'LINE MUSIC':    { category: '娛樂', currency: 'TWD', cycle: 'monthly' },
+  'KKBOX':         { category: '娛樂', currency: 'TWD', cycle: 'monthly' },
+  'Coursera':      { category: '教育', currency: 'USD', cycle: 'yearly'  },
+};
+
+let selectedServiceBtn = null;
+let selectedPlanChip = null;
+let quickBtnsBuilt = false;
+
+function buildServiceButtons() {
+  if (quickBtnsBuilt) return;
+  const grid = document.getElementById('service-grid');
+  Object.entries(SERVICE_MAP).forEach(([name, info]) => {
+    const btn = document.createElement('button');
+    btn.className = 'quick-btn';
+    const displayName = name === 'YouTube Premium' ? 'YouTube' : name === 'Microsoft 365' ? 'MS 365' : name;
+    btn.innerHTML = `<span class="quick-icon">${info.icon}</span><span class="quick-name">${displayName}</span>`;
+    btn.onclick = () => selectService(name, btn);
+    grid.appendChild(btn);
+  });
+  quickBtnsBuilt = true;
+}
+
+function selectService(name, btn) {
+  if (selectedServiceBtn) selectedServiceBtn.classList.remove('selected');
+  btn.classList.add('selected');
+  selectedServiceBtn = btn;
+  selectedPlanChip = null;
+
+  const info = SERVICE_MAP[name];
+  document.getElementById('f-name').value = name;
+  document.getElementById('f-category').value = info.category;
+  document.getElementById('f-currency').value = info.currency;
+  document.getElementById('f-cycle').value = info.cycle;
+  document.getElementById('f-amount').value = '';
+
+  const planRow = document.getElementById('plan-row');
+  const planChips = document.getElementById('plan-chips');
+  document.getElementById('plan-label').textContent = `選擇 ${name} 方案`;
+  planChips.innerHTML = '';
+
+  const CYCLE_LABEL = { monthly: '月付', yearly: '年付', quarterly: '季付' };
+  const sym = info.currency === 'TWD' ? 'NT$' : (info.currency === 'USD' ? '$' : info.currency + ' ');
+
+  if (info.plans.length === 1) {
+    const plan = info.plans[0];
+    document.getElementById('f-amount').value = plan.amount;
+    if (plan.cycle) document.getElementById('f-cycle').value = plan.cycle;
+    flashField('f-amount');
+    document.getElementById('name-hint').textContent = `✓ 已自動帶入 ${info.category}・${info.currency}・${CYCLE_LABEL[plan.cycle || info.cycle]}・${sym}${plan.amount}`;
+    planRow.classList.remove('visible');
+  } else {
+    info.plans.forEach(plan => {
+      const chip = document.createElement('button');
+      chip.className = 'plan-chip';
+      chip.textContent = `${plan.name}　${sym}${plan.amount}`;
+      chip.onclick = () => selectPlan(plan, chip, info);
+      planChips.appendChild(chip);
+    });
+    planRow.classList.add('visible');
+    document.getElementById('name-hint').textContent = `↑ 請選擇 ${name} 的方案`;
+  }
+}
+
+function selectPlan(plan, chip, serviceInfo) {
+  if (selectedPlanChip) selectedPlanChip.classList.remove('selected');
+  chip.classList.add('selected');
+  selectedPlanChip = chip;
+
+  document.getElementById('f-amount').value = plan.amount;
+  if (plan.cycle) document.getElementById('f-cycle').value = plan.cycle;
+  flashField('f-amount');
+
+  const CYCLE_LABEL = { monthly: '月付', yearly: '年付', quarterly: '季付' };
+  const cycle = plan.cycle || serviceInfo.cycle;
+  const sym = serviceInfo.currency === 'TWD' ? 'NT$' : (serviceInfo.currency === 'USD' ? '$' : serviceInfo.currency + ' ');
+  document.getElementById('name-hint').textContent = `✓ 已自動帶入 ${serviceInfo.category}・${serviceInfo.currency}・${CYCLE_LABEL[cycle]}・${sym}${plan.amount}`;
+}
+
+function flashField(id) {
+  const el = document.getElementById(id);
+  el.classList.add('autofilled');
+  setTimeout(() => el.classList.remove('autofilled'), 1500);
+}
+
+function onNameInput(el) {
+  const info = SERVICE_MAP[el.value] || SIMPLE_SERVICES[el.value];
+  if (!info) { document.getElementById('name-hint').textContent = ''; return; }
+  document.getElementById('f-category').value = info.category;
+  document.getElementById('f-currency').value = info.currency;
+  document.getElementById('f-cycle').value = info.cycle;
+  if (SERVICE_MAP[el.value]) {
+    document.getElementById('name-hint').textContent = `↑ 從上方選擇方案以自動帶入價格`;
+  } else {
+    const CYCLE_LABEL = { monthly: '月付', yearly: '年付', quarterly: '季付' };
+    document.getElementById('name-hint').textContent = `✓ 已自動帶入 ${info.category}・${info.currency}・${CYCLE_LABEL[info.cycle]}`;
+  }
+}
+
 Chart.register(ChartDataLabels);
 
 let subs = [];
@@ -397,6 +517,8 @@ function openModal(id) {
   document.getElementById('members-list').innerHTML = '';
 
   if (id) {
+    document.getElementById('quick-section').classList.add('hidden');
+    document.getElementById('name-hint').textContent = '';
     const s = subs.find(x => x.id === id);
     document.getElementById('f-name').value = s.name || '';
     document.getElementById('f-category').value = s.category || '其他';
@@ -413,6 +535,12 @@ function openModal(id) {
     document.getElementById('f-pay-to').value = s.pay_to || '';
     (s.members || []).forEach(m => addMemberRow(m.name, m.amount, m.id));
   } else {
+    document.getElementById('quick-section').classList.remove('hidden');
+    if (selectedServiceBtn) { selectedServiceBtn.classList.remove('selected'); selectedServiceBtn = null; }
+    if (selectedPlanChip) { selectedPlanChip.classList.remove('selected'); selectedPlanChip = null; }
+    document.getElementById('plan-row').classList.remove('visible');
+    document.getElementById('plan-chips').innerHTML = '';
+    document.getElementById('name-hint').textContent = '';
     document.getElementById('f-name').value = '';
     document.getElementById('f-category').value = '娛樂';
     document.getElementById('f-status').value = 'active';
@@ -495,4 +623,5 @@ async function del(id) {
   load();
 }
 
+buildServiceButtons();
 load();
