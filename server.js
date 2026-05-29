@@ -190,27 +190,30 @@ let tgOffset = 0;
 let tgPolling = false;
 
 async function handleCallback(cb) {
+  // 回應按鈕點擊；按鈕逾時（太晚按）會失敗，吞掉即可，不影響後續續期與確認訊息
+  const ack = (t) => tg.answerCallback(cb.id, t).catch(() => {});
+
   const m = (cb.data || '').match(/^renew:(\d+):(\d{4}-\d{2}-\d{2})$/);
-  if (!m) { await tg.answerCallback(cb.id, '無法辨識的操作'); return; }
+  if (!m) { ack('無法辨識的操作'); return; }
   const [, id, expectedDate] = m;
 
   const data = readData();
   const idx = data.findIndex(s => s.id === id);
-  if (idx === -1) { await tg.answerCallback(cb.id, '找不到這筆訂閱'); return; }
+  if (idx === -1) { ack('找不到這筆訂閱'); return; }
 
   const sub = data[idx];
   // 防重複按：目前到期日已不是按鈕當初那一期，代表已更新過
   if (sub.next_billing_date !== expectedDate) {
-    await tg.answerCallback(cb.id, `這筆已經更新過囉（目前 ${sub.next_billing_date}）`);
+    ack(`這筆已經更新過囉（目前 ${sub.next_billing_date}）`);
     return;
   }
 
   const newDate = advanceDate(sub.next_billing_date, sub.cycle);
   data[idx] = { ...sub, next_billing_date: newDate };
   writeData(data);
-  await tg.answerCallback(cb.id, '已更新');
-  await tg.sendMessage(`✅ *${sub.name}* 已續到 ${newDate}`);
   console.log(`🔄 ${sub.name}：${expectedDate} → ${newDate}`);
+  ack('已更新');
+  await tg.sendMessage(`✅ *${sub.name}* 已續到 ${newDate}`);
 }
 
 async function pollTelegram() {
