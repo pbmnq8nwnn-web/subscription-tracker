@@ -1,15 +1,17 @@
 #!/bin/bash
-PROJECT="/Users/chenszu-jung/Downloads/chen-agent/subscription-tracker"
-NODE="/opt/homebrew/bin/node"
+# 開啟訂閱管理工具網頁。
+# server 本身由 launchd（com.leo.subscription-server）在背景常駐，
+# 這個檔只負責開瀏覽器，不再自己啟動 node、不綁終端機視窗。
 
-# 如果已在跑就直接開瀏覽器
-if lsof -i :3456 -sTCP:LISTEN -t > /dev/null 2>&1; then
-  open "http://127.0.0.1:3456"
-  exit 0
+URL="http://127.0.0.1:3456"
+
+# 若 server 還沒起來（剛重開機等情況），叫醒 launchd agent 再等它就緒
+if ! lsof -i :3456 -sTCP:LISTEN -t > /dev/null 2>&1; then
+  launchctl kickstart -k "gui/$(id -u)/com.leo.subscription-server" 2>/dev/null
+  for i in {1..10}; do
+    lsof -i :3456 -sTCP:LISTEN -t > /dev/null 2>&1 && break
+    sleep 0.5
+  done
 fi
 
-# 啟動 server
-cd "$PROJECT"
-"$NODE" server.js &
-sleep 2
-open "http://127.0.0.1:3456"
+open "$URL"

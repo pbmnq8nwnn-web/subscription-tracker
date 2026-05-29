@@ -6,6 +6,7 @@ subscriptions.json
 rates.cache.json
 backups/
 check.log
+server.log
 
 # macOS 系統檔
 .DS_Store
