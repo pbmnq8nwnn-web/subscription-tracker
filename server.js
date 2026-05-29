@@ -3,6 +3,8 @@ const helmet = require('helmet');
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const { advanceDate } = require('./lib/renew');
+const tg = require('./lib/telegram');
 
 const app = express();
 const PORT = 3456;
@@ -183,8 +185,69 @@ app.delete('/api/subscriptions/:id', (req, res) => {
   res.json({ ok: true });
 });
 
-app.listen(PORT, HOST, () => {
+// ── Telegram 按鈕輪詢：處理「已續訂」確認 ───────────────
+let tgOffset = 0;
+let tgPolling = false;
+
+async function handleCallback(cb) {
+  const m = (cb.data || '').match(/^renew:(\d+):(\d{4}-\d{2}-\d{2})$/);
+  if (!m) { await tg.answerCallback(cb.id, '無法辨識的操作'); return; }
+  const [, id, expectedDate] = m;
+
+  const data = readData();
+  const idx = data.findIndex(s => s.id === id);
+  if (idx === -1) { await tg.answerCallback(cb.id, '找不到這筆訂閱'); return; }
+
+  const sub = data[idx];
+  // 防重複按：目前到期日已不是按鈕當初那一期，代表已更新過
+  if (sub.next_billing_date !== expectedDate) {
+    await tg.answerCallback(cb.id, `這筆已經更新過囉（目前 ${sub.next_billing_date}）`);
+    return;
+  }
+
+  const newDate = advanceDate(sub.next_billing_date, sub.cycle);
+  data[idx] = { ...sub, next_billing_date: newDate };
+  writeData(data);
+  await tg.answerCallback(cb.id, '已更新');
+  await tg.sendMessage(`✅ *${sub.name}* 已續到 ${newDate}`);
+  console.log(`🔄 ${sub.name}：${expectedDate} → ${newDate}`);
+}
+
+async function pollTelegram() {
+  if (!tg.BOT_TOKEN || !tg.CHAT_ID) {
+    console.warn('⚠️ 未設定 Telegram token，略過按鈕輪詢（網頁照常運作）');
+    return;
+  }
+  tgPolling = true;
+  console.log('📡 Telegram 按鈕輪詢已啟動');
+  while (tgPolling) {
+    try {
+      const updates = await tg.getUpdates(tgOffset, 30);
+      for (const u of updates) {
+        tgOffset = u.update_id + 1;
+        if (u.callback_query) await handleCallback(u.callback_query);
+      }
+    } catch (e) {
+      if (tgPolling) {
+        console.warn('⚠️ Telegram 輪詢錯誤：', e.message);
+        await new Promise(r => setTimeout(r, 5000)); // 退避 5 秒再試
+      }
+    }
+  }
+}
+
+const server = app.listen(PORT, HOST, () => {
   console.log(`✅ 訂閱管理工具已啟動：http://${HOST}:${PORT}`);
   console.log(`🔒 僅接受本機連線`);
-  getRates(); // 啟動時預熱匯率快取
+  getRates();    // 啟動時預熱匯率快取
+  pollTelegram(); // 開始聽 Telegram 按鈕
 });
+
+function shutdown() {
+  tgPolling = false;                     // 停止輪詢迴圈
+  server.close(() => process.exit(0));   // 正常情況：連線排空就退出
+  server.closeAllConnections();          // 主動剪斷殘留的 keep-alive 連線（避免關機卡住）
+  setTimeout(() => process.exit(0), 2000).unref();  // 保險：2 秒仍未退出就強制退出
+}
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
