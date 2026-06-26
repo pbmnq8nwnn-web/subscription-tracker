@@ -1,15 +1,8 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>訂閱管理</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-<link rel="stylesheet" href="/style.css" />
-</head>
-<body>
+import Head from 'next/head';
+import Script from 'next/script';
+import { getSession } from '../lib/auth';
 
+const PAGE_HTML = `
 <header>
   <h1>📋 訂閱管理</h1>
   <button onclick="openModal()">＋ 新增訂閱</button>
@@ -83,12 +76,10 @@
 </div>
 <div class="list" id="list"></div>
 
-<!-- Modal -->
 <div class="overlay" id="overlay">
   <div class="modal">
     <h2 id="modal-title">新增訂閱</h2>
 
-    <!-- 快速新增區（新增時顯示，編輯時隱藏） -->
     <div id="quick-section">
       <div class="quick-label">熱門服務快選</div>
       <div class="quick-grid" id="service-grid"></div>
@@ -102,7 +93,6 @@
     </div>
 
     <div class="form-grid">
-
       <div class="form-full">
         <label>服務名稱 *</label>
         <input id="f-name" list="service-list" placeholder="例：Netflix、Spotify" oninput="onNameInput(this)" />
@@ -235,7 +225,25 @@
 </div>
 
 <div class="toast-container" id="toast-container"></div>
+`;
 
-<script src="/app.js"></script>
-</body>
-</html>
+export default function Home() {
+  return (
+    <>
+      <Head>
+        <title>訂閱管理</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      </Head>
+      <div dangerouslySetInnerHTML={{ __html: PAGE_HTML }} />
+      <Script src="/app.js" strategy="afterInteractive" />
+    </>
+  );
+}
+
+export async function getServerSideProps({ req, res }) {
+  const session = await getSession(req, res);
+  if (!session.authenticated) {
+    return { redirect: { destination: '/login', permanent: false } };
+  }
+  return { props: {} };
+}
