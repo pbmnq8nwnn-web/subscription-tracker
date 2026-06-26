@@ -1,14 +1,6 @@
-# 📋 訂閱管理工具
+# 訂閱管理工具
 
-一個跑在本機的個人訂閱費用管理工具，解決「不知道自己每個月訂閱花了多少錢」的問題。
-
-![主畫面](screenshots/overview.png)
-
----
-
-## 為什麼做這個
-
-訂閱制服務越來越多，有些月付、有些年付、有些是家庭方案分攤——費用散落在不同信用卡帳單裡，很難一眼看清楚實際花了多少。市面上的工具不是要訂閱費就是資料放雲端，所以選擇自己做一個：資料完全在本機，沒有第三方，免費。
+個人訂閱費用管理工具，解決「不知道自己每個月到底花了多少在訂閱上」的問題。
 
 ---
 
@@ -20,26 +12,25 @@
 - 狀態管理：使用中 / 暫停 / 已取消
 
 ### 家庭方案
-- **個人方案**：我付全額
-- **成員模式**：記錄我的分攤金額和付給誰
+- **個人方案**：自付全額
+- **成員模式**：記錄自己的分攤金額和付給誰
 - **團主模式**：管理成員名單、追蹤各成員是否已回補金額
-
-![訂閱清單](screenshots/full-list.png)
 
 ### 費用視覺化
 - 甜甜圈圖：各分類每月實際花費佔比
 - 長條圖：未來 12 個月扣款預測，自動標示高峰月份
-- 統計卡片：每月 / 每年實際花費（以我實際負擔的金額計算，非訂閱原價）
+- 統計卡片：每月 / 每年實際花費（以實際負擔金額計算，非訂閱原價）
 
-### 提醒與排序
-- Telegram Bot 主動推播到期提醒，macOS 每天早上 9 點自動執行
+### 提醒
+- Telegram Bot 推播到期提醒，每天早上 9:00（台北時間）自動執行
+- 提醒訊息含 inline 按鈕，點一下即可更新到下一個扣款週期
+
+### 篩選與排序
 - 排序：到期日（近 / 遠）、月費換算（高 / 低，年付自動換算為月費比較）
 - Chip 篩選：分類 × 狀態，一鍵切換
 
 ### 快速新增
-點擊熱門服務圖示（Netflix、Spotify、iCloud+ 等 9 個），自動帶入分類、幣別、週期，並展開對應方案供選擇（例如 iCloud+ 的 50GB / 200GB / 2TB）；選完方案後金額也同步填入，大幅減少手動輸入。支援 `<datalist>` 打字自動建議，涵蓋 20 個服務。
-
-![新增訂閱](screenshots/add-form.png)
+點擊熱門服務圖示（Netflix、Spotify、iCloud+ 等），自動帶入分類、幣別、週期，並展開對應方案供選擇；選完方案後金額同步填入。支援打字自動建議，涵蓋 20 個常見服務。
 
 ---
 
@@ -47,38 +38,76 @@
 
 | 層級 | 技術 |
 |------|------|
-| 後端 | Node.js + Express |
-| 前端 | 原生 HTML / CSS / JS（無框架） |
+| 前端 | Next.js 15（Pages Router）+ 原生 HTML/CSS/JS |
+| 後端 | Next.js API Routes（serverless） |
+| 資料庫 | Neon PostgreSQL（serverless） |
 | 圖表 | Chart.js 4.4 + chartjs-plugin-datalabels |
-| 資料 | JSON 檔案，每日自動備份，保留 7 天 |
-| 匯率 | @fawazahmed0/currency-api（免費，每日更新） |
-| 安全 | 僅綁定 127.0.0.1、helmet 安全標頭、Origin/Referer 驗證、input 白名單驗證 |
-| 通知 | Telegram Bot API + macOS LaunchAgent |
+| 匯率 | @fawazahmed0/currency-api（免費，每日更新，快取於 DB） |
+| 認證 | iron-session（加密 cookie，密碼登入） |
+| 通知 | Telegram Bot API（Webhook 模式） |
+| 排程 | Vercel Cron Jobs（每天 01:00 UTC = 台北 09:00） |
+| 部署 | Vercel |
 
 ---
 
-## 本地啟動
+## 自行部署
+
+### 前置需求
+
+- [Vercel](https://vercel.com) 帳號
+- [Neon](https://neon.tech) 帳號（PostgreSQL）
+- Telegram Bot Token（透過 [@BotFather](https://t.me/BotFather) 建立）
+
+### 步驟
+
+**1. 建立 Neon 資料庫**
+
+在 Neon 建立新 project，取得 connection string。
+
+**2. 部署到 Vercel**
 
 ```bash
-# 安裝依賴
+git clone <this-repo>
+cd subscription-tracker
 npm install
-
-# 啟動 server（預設 port 3456）
-node server.js
+vercel --prod
 ```
 
-打開瀏覽器前往 `http://127.0.0.1:3456`
+**3. 設定環境變數**
 
-> **Telegram 提醒設定**：複製 `.env.example` 為 `.env`，填入 Bot Token 和 Chat ID，即可啟用每日到期提醒推播。
+在 Vercel 專案設定中加入：
+
+```
+DATABASE_URL=            # Neon connection string
+TELEGRAM_BOT_TOKEN=      # Telegram Bot Token
+TELEGRAM_CHAT_ID=        # 你的 Telegram Chat ID
+APP_PASSWORD=            # 登入密碼（自訂）
+SESSION_SECRET=          # 隨機 64 字元 hex 字串
+TELEGRAM_WEBHOOK_SECRET= # 隨機字串，Webhook 驗證用
+```
+
+**4. 初始化資料庫**
+
+```bash
+node --env-file=.env.local scripts/migrate.mjs
+```
+
+**5. 註冊 Telegram Webhook**
+
+部署完成後，瀏覽器打開：
+
+```
+https://<your-vercel-url>/api/telegram/setup?secret=<APP_PASSWORD>
+```
 
 ---
 
-## 開發過程
+## 本機開發
 
-這個工具從需求到上線完全以 AI 協作開發，過程中刻意從三個角色切入思考：
+複製 `.env.local.example` 為 `.env.local`，填入環境變數後：
 
-**PM**：先定義核心痛點（不知道花多少）、邊界（不需要雲端、不需要帳號）、MVP 範圍，再逐步迭代家庭方案、提醒功能等進階需求。
+```bash
+npm run dev
+```
 
-**UX/UI**：從實際操作痛點出發——年付和月付費用無法比較、下拉篩選太慢、操作後沒有回饋——逐一優化成月費換算顯示、Chip 篩選、Toast 通知。
-
-**RD**：刻意選擇最小依賴（純 JSON 不用資料庫、原生 JS 不用框架），並在安全性（localhost only、input 驗證）、資料安全（自動備份）、可維護性（拆分 CSS / JS 檔案）上做到生產品質。
+打開瀏覽器前往 `http://localhost:3000`
