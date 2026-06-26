@@ -143,3 +143,16 @@ textarea { resize: vertical; min-height: 60px; }
 .plan-chip.selected { background: #4f46e5; color: #fff; border-color: #4f46e5; }
 .hint { font-size: 11px; color: #6366f1; margin-top: 5px; min-height: 16px; }
 input.autofilled { border-color: #4f46e5 !important; background: #f8f9fe !important; }
+
+/* 登入頁 */
+.login-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f8f9fe; }
+.login-card { background: #fff; border-radius: 20px; padding: 48px 40px; width: 360px; max-width: 95vw; box-shadow: 0 4px 24px rgba(79,70,229,.12); text-align: center; }
+.login-icon { font-size: 48px; margin-bottom: 12px; }
+.login-card h1 { font-size: 22px; font-weight: 700; color: #1e1b4b; margin-bottom: 28px; }
+.login-card form { display: flex; flex-direction: column; gap: 12px; }
+.login-card input[type="password"] { width: 100%; border: 1.5px solid #d2d2d7; border-radius: 10px; padding: 12px 16px; font-size: 15px; outline: none; text-align: center; }
+.login-card input[type="password"]:focus { border-color: #4f46e5; }
+.login-card button { background: #4f46e5; color: #fff; border: none; border-radius: 10px; padding: 12px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background .15s; }
+.login-card button:hover:not(:disabled) { background: #4338ca; }
+.login-card button:disabled { opacity: .6; cursor: not-allowed; }
+.login-error { color: #ef4444; font-size: 13px; margin: 0; }

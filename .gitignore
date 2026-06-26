@@ -1,15 +1,19 @@
-# 敏感資訊與個人資料
+# env
 .env
+.env.local
+.env*.local
+
+# data
 subscriptions.json
-
-# 自動產生的快取與備份
-rates.cache.json
 backups/
-check.log
 server.log
+check.log
+rates.cache.json
 
-# macOS 系統檔
-.DS_Store
-
-# Node.js
+# next.js
+.next/
+out/
 node_modules/
+
+# misc
+.DS_Store
