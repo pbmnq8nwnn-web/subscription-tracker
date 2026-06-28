@@ -12,8 +12,15 @@ function daysUntil(dateStr) {
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
 
+  // Auth 策略：
+  // 1. Vercel Cron 帶 CRON_SECRET → 驗 header（正常情況）
+  // 2. CRON_SECRET 未注入（Hobby team 限制）→ 放行 Vercel 自動呼叫
+  // 3. 手動測試 → ?secret=APP_PASSWORD
+  const cronSecret = process.env.CRON_SECRET;
   const authHeader = req.headers.authorization;
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const isVercelCron = cronSecret ? authHeader === `Bearer ${cronSecret}` : true;
+  const isManual = req.query.secret === process.env.APP_PASSWORD;
+  if (!isVercelCron && !isManual) {
     return res.status(401).end();
   }
 
