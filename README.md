@@ -22,7 +22,7 @@
 - 統計卡片：每月 / 每年實際花費（以實際負擔金額計算，非訂閱原價）
 
 ### 提醒
-- Telegram Bot 推播到期提醒，每天早上 9:00（台北時間）自動執行
+- Telegram Bot 推播到期提醒，每天早上 08:20（台北時間）自動執行
 - 提醒訊息含 inline 按鈕，點一下即可更新到下一個扣款週期
 
 ### 篩選與排序
@@ -45,7 +45,7 @@
 | 匯率 | @fawazahmed0/currency-api（免費，每日更新，快取於 DB） |
 | 認證 | iron-session（加密 cookie，密碼登入） |
 | 通知 | Telegram Bot API（Webhook 模式） |
-| 排程 | Vercel Cron Jobs（每天 01:00 UTC = 台北 09:00） |
+| 排程 | Vercel Cron Jobs（每天 00:20 UTC = 台北 08:20） |
 | 部署 | Vercel |
 
 ---
@@ -84,6 +84,14 @@ TELEGRAM_CHAT_ID=        # 你的 Telegram Chat ID
 APP_PASSWORD=            # 登入密碼（自訂）
 SESSION_SECRET=          # 隨機 64 字元 hex 字串
 TELEGRAM_WEBHOOK_SECRET= # 隨機字串，Webhook 驗證用
+CRON_SECRET=             # 選填（Vercel Pro 方案才需要）：驗證 /api/cron/check 是 Vercel Cron 觸發，
+                         # 沒設也沒關係，端點會退而求其次驗 Vercel cron 專屬 header
+```
+
+要手動測試提醒功能（不等排程），瀏覽器打開：
+
+```
+https://<your-vercel-url>/api/cron/check?secret=<APP_PASSWORD>
 ```
 
 **4. 初始化資料庫**
