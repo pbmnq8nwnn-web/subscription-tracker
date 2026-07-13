@@ -2,7 +2,7 @@
 // 執行方式：node --env-file=.env.local scripts/migrate.mjs
 
 import { neon } from '@neondatabase/serverless';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -41,8 +41,12 @@ async function main() {
 
   console.log('✅ 資料表建立完成');
 
-  // 讀取本機 JSON
+  // 讀取本機 JSON（新部署者通常沒有這個檔，純建表即可，不算錯誤）
   const dataPath = join(__dirname, '../subscriptions.json');
+  if (!existsSync(dataPath)) {
+    console.log('ℹ️ 沒有找到 subscriptions.json，略過匯入（僅建表，這是正常情況）');
+    return;
+  }
   const subs = JSON.parse(readFileSync(dataPath, 'utf-8'));
   console.log(`📦 讀到 ${subs.length} 筆訂閱`);
 

@@ -134,15 +134,33 @@ let barChart = null;
 let filterCategory = '';
 let filterStatus = '';
 
+// 統一包一層：非 2xx 就 throw，呼叫端不會誤把失敗當成功
+async function apiFetch(url, options) {
+  const res = await fetch(url, options);
+  if (res.status === 401) {
+    window.location.href = '/login';
+    throw new Error('未登入或登入已過期');
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `請求失敗（${res.status}）`);
+  }
+  return res;
+}
+
 async function load() {
-  const [subsRes, ratesRes] = await Promise.all([
-    fetch('/api/subscriptions'),
-    fetch('/api/rates'),
-  ]);
-  subs = await subsRes.json();
-  const rates = await ratesRes.json();
-  Object.assign(EXCHANGE, rates);
-  render();
+  try {
+    const [subsRes, ratesRes] = await Promise.all([
+      apiFetch('/api/subscriptions'),
+      apiFetch('/api/rates'),
+    ]);
+    subs = await subsRes.json();
+    const rates = await ratesRes.json();
+    Object.assign(EXCHANGE, rates);
+    render();
+  } catch (e) {
+    showToast(e.message || '載入失敗，請重新整理', 'error');
+  }
 }
 
 function getFilters() {
@@ -469,12 +487,16 @@ async function togglePaid(subId, memberId) {
   const s = subs.find(x => x.id === subId);
   if (!s) return;
   const members = (s.members || []).map(m => m.id === memberId ? { ...m, paid: !m.paid } : m);
-  await fetch(`/api/subscriptions/${subId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...s, members })
-  });
-  load();
+  try {
+    await apiFetch(`/api/subscriptions/${subId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...s, members })
+    });
+    load();
+  } catch (e) {
+    showToast(e.message || '更新失敗', 'error');
+  }
 }
 
 function onPlanTypeChange() {
@@ -604,23 +626,30 @@ async function save() {
     members,
   };
 
-  if (editingId) {
-    await fetch(`/api/subscriptions/${editingId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-    showToast('✓ 已更新訂閱');
-  } else {
-    await fetch('/api/subscriptions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-    showToast('✓ 已新增訂閱');
+  try {
+    if (editingId) {
+      await apiFetch(`/api/subscriptions/${editingId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      showToast('✓ 已更新訂閱');
+    } else {
+      await apiFetch('/api/subscriptions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      showToast('✓ 已新增訂閱');
+    }
+    closeModal();
+    load();
+  } catch (e) {
+    showToast(e.message || '儲存失敗', 'error');
   }
-
-  closeModal();
-  load();
 }
 
 async function del(id) {
   if (!confirm('確定要刪除這筆訂閱嗎？')) return;
-  await fetch(`/api/subscriptions/${id}`, { method: 'DELETE' });
-  showToast('已刪除', 'info');
-  load();
+  try {
+    await apiFetch(`/api/subscriptions/${id}`, { method: 'DELETE' });
+    showToast('已刪除', 'info');
+    load();
+  } catch (e) {
+    showToast(e.message || '刪除失敗', 'error');
+  }
 }
 
 buildServiceButtons();
