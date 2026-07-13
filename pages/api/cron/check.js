@@ -14,12 +14,17 @@ export default async function handler(req, res) {
 
   // Auth 策略：
   // 1. Vercel Cron 帶 CRON_SECRET → 驗 header（正常情況）
-  // 2. CRON_SECRET 未注入（Hobby team 限制）→ 放行 Vercel 自動呼叫
-  // 3. 手動測試 → ?secret=APP_PASSWORD
+  // 2. CRON_SECRET 未注入（Hobby team 限制）→ 退而求其次驗 Vercel cron 專屬特徵
+  //    （x-vercel-cron header 或 user-agent 開頭 vercel-cron/），不是完全放行
+  // 3. 手動測試 → ?secret=APP_PASSWORD（APP_PASSWORD 沒設就一律拒絕，避免 undefined === undefined 恆過）
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = req.headers.authorization;
-  const isVercelCron = cronSecret ? authHeader === `Bearer ${cronSecret}` : true;
-  const isManual = req.query.secret === process.env.APP_PASSWORD;
+  const looksLikeVercelCron =
+    req.headers['x-vercel-cron'] !== undefined ||
+    (req.headers['user-agent'] || '').startsWith('vercel-cron/');
+  const isVercelCron = cronSecret ? authHeader === `Bearer ${cronSecret}` : looksLikeVercelCron;
+  const appPassword = process.env.APP_PASSWORD;
+  const isManual = Boolean(appPassword) && req.query.secret === appPassword;
   if (!isVercelCron && !isManual) {
     return res.status(401).end();
   }
