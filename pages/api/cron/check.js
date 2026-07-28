@@ -1,5 +1,6 @@
 import sql, { normalizeRow } from '../../../lib/db';
 import { sendMessage } from '../../../lib/telegram';
+import { getRates, formatCost } from '../../../lib/rates';
 
 function daysUntil(dateStr) {
   const today = new Date();
@@ -49,12 +50,14 @@ export default async function handler(req, res) {
     return s.amount;
   }
 
+  const rates = await getRates();
+
   const lines = alerts.map(s => {
     const days = daysUntil(s.next_billing_date);
     const urgency = days <= 0 ? '🔴' : days <= 3 ? '🟠' : '🟡';
     const dueText = days < 0 ? `已逾期 ${-days} 天` : days === 0 ? '今天到期！' : `${days} 天後到期`;
-    const cost = Math.round(myActualCost(s));
-    const costLabel = s.plan_type === 'member' ? `我分攤 NT$${cost.toLocaleString()}` : `NT$${cost.toLocaleString()}`;
+    const cost = formatCost(myActualCost(s), s.currency, rates);
+    const costLabel = s.plan_type === 'member' ? `我分攤 ${cost}` : cost;
     return `${urgency} *${s.name}* — ${costLabel}（${dueText}）\n   📅 ${s.next_billing_date}  💳 ${s.payment || '未設定'}`;
   }).join('\n\n');
 
