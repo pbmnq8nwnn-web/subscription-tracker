@@ -64,11 +64,16 @@ header button:hover { background: #4338ca; }
 .card-due.urgent { color: #ef4444; font-weight: 600; }
 .card-due.soon { color: #f59e0b; font-weight: 600; }
 
-.card-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.card-actions { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; max-width: 220px; }
 .btn-edit { background: #f8f9fe; border: 1px solid #e0e7ff; border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; color: #1e1b4b; }
 .btn-edit:hover { background: #ede9fe; }
 .btn-del { background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; color: #ef4444; }
 .btn-del:hover { background: #ffe4e6; }
+.btn-renew { background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; color: #059669; }
+.btn-renew:hover { background: #d1fae5; }
+.btn-cancel-sub { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; color: #c2410c; }
+.btn-cancel-sub:hover { background: #ffedd5; }
+.card-actions button:disabled { opacity: .5; cursor: not-allowed; }
 
 .members-panel { margin-top: 12px; padding-top: 12px; border-top: 1px solid #f0f0f0; }
 .members-panel-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
