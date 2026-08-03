@@ -413,6 +413,16 @@ function render() {
     if (s.plan_type === 'organizer') roleTag = `<span class="tag tag-organizer">團主</span>`;
     if (s.plan_type === 'member') roleTag = `<span class="tag tag-member">成員・付給 ${s.pay_to || '?'}</span>`;
 
+    let quickActions = '';
+    if (s.status === 'active') {
+      quickActions = `
+          <button class="btn-renew" onclick="quickRenew('${s.id}', this)" title="按一下把下次扣款日推進一期">續訂</button>
+          <button class="btn-cancel-sub" onclick="quickCancel('${s.id}', this)">取消訂閱</button>`;
+    } else if (s.status === 'paused') {
+      quickActions = `
+          <button class="btn-cancel-sub" onclick="quickCancel('${s.id}', this)">取消訂閱</button>`;
+    }
+
     const amountDisplay = `NT$${fmt(actualTWD)}`;
     const monthlyEquiv = s.cycle !== 'monthly' ? `≈ NT$${fmt(myActualMonthly(s))}/月` : '';
     const amountSub = isSharingPlan ? `原價 ${s.currency} ${(+s.amount).toLocaleString()}` : '';
@@ -466,6 +476,7 @@ function render() {
           <div class="card-due ${dueClass}">${dueText}</div>
         </div>
         <div class="card-actions">
+          ${quickActions}
           <button class="btn-edit" onclick="openModal('${s.id}')">編輯</button>
           <button class="btn-del" onclick="del('${s.id}')">刪除</button>
         </div>
@@ -649,6 +660,42 @@ async function del(id) {
     load();
   } catch (e) {
     showToast(e.message || '刪除失敗', 'error');
+  }
+}
+
+async function quickRenew(id, btn) {
+  btn.disabled = true;
+  try {
+    const res = await apiFetch(`/api/subscriptions/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'renew' }),
+    });
+    const updated = await res.json();
+    showToast(`✅ 已續到 ${updated.next_billing_date}`);
+  } catch (e) {
+    showToast(e.message || '續訂失敗', 'error');
+  } finally {
+    load();
+  }
+}
+
+async function quickCancel(id, btn) {
+  const s = subs.find(x => x.id === id);
+  if (!confirm(`確定要取消「${s ? s.name : '這筆'}」的訂閱嗎？之後不會再提醒。`)) return;
+  btn.disabled = true;
+  try {
+    await apiFetch(`/api/subscriptions/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'cancel' }),
+    });
+    const msg = filterStatus === 'active' ? '🚫 已取消訂閱（已從「使用中」清單移出）' : '🚫 已取消訂閱';
+    showToast(msg, 'info');
+  } catch (e) {
+    showToast(e.message || '取消失敗', 'error');
+  } finally {
+    load();
   }
 }
 
