@@ -1,5 +1,5 @@
 import sql, { normalizeRow } from '../../../lib/db';
-import { sendMessage } from '../../../lib/telegram';
+import { sendMessage, escapeMarkdown } from '../../../lib/telegram';
 import { getRates, formatCost } from '../../../lib/rates';
 
 function daysUntil(dateStr) {
@@ -58,16 +58,16 @@ export default async function handler(req, res) {
     const dueText = days < 0 ? `已逾期 ${-days} 天` : days === 0 ? '今天到期！' : `${days} 天後到期`;
     const cost = formatCost(myActualCost(s), s.currency, rates);
     const costLabel = s.plan_type === 'member' ? `我分攤 ${cost}` : cost;
-    return `${urgency} *${s.name}* — ${costLabel}（${dueText}）\n   📅 ${s.next_billing_date}  💳 ${s.payment || '未設定'}`;
+    return `${urgency} *${escapeMarkdown(s.name)}* — ${costLabel}（${dueText}）\n   📅 ${s.next_billing_date}  💳 ${s.payment || '未設定'}`;
   }).join('\n\n');
 
-  const text = `📋 *訂閱到期提醒*\n\n${lines}\n\n_共 ${alerts.length} 筆，續訂後請按下方按鈕更新到下一期_`;
+  const text = `📋 *訂閱到期提醒*\n\n${lines}\n\n_共 ${alerts.length} 筆，續訂了按「已續訂」更新到下一期；不續了按「不續了」直接標記取消_`;
 
   const reply_markup = {
-    inline_keyboard: alerts.map(s => [{
-      text: `✅ ${s.name} 已續訂`,
-      callback_data: `renew:${s.id}:${s.next_billing_date}`,
-    }]),
+    inline_keyboard: alerts.map(s => [
+      { text: `✅ ${s.name} 已續訂`, callback_data: `renew:${s.id}:${s.next_billing_date}` },
+      { text: `❌ ${s.name} 不續了`, callback_data: `cancel:${s.id}:${s.next_billing_date}` },
+    ]),
   };
 
   await sendMessage(text, { reply_markup });
